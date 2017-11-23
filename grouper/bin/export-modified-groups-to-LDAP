@@ -1,0 +1,168 @@
+#!/usr/bin/perl
+
+# export-modified-groups-to-LDAP: call "gsh -psp -bulkSync -entityName memberExternal" when an external member is added/removed/modified
+
+#replace PspChangeLogConsumer with our own script export-modified-groups-to-LDAP
+#workaround bug in PspChangeLogConsumer causing things like:
+#grouper_error.log.2013-02-05:2013-02-06 10:18:10,019: [DefaultQuartzScheduler_Worker-10] ERROR ChangeLogHelper.processRecords(281) -  - Did not get all the way through the batch! 18848 != 18948
+
+
+use DBI;
+use strict;
+use feature 'state';
+
+chdir '/opt/grouper-esup/grouper'; # esp. for running bin/gsh
+
+my $config_properties_file = 'conf/grouper.hibernate.properties';
+my $config_properties = parseProperties($config_properties_file);
+my $username = $config_properties->{'hibernate.connection.username'};
+my $password = $config_properties->{'hibernate.connection.password'};
+my $data_source = $config_properties->{'hibernate.connection.url'} =~ m!jdbc:mysql://localhost[^/]*/(.*)! && $1;
+
+my $dbh = DBI->connect('DBI:Pg:' . $data_source, $username, $password) or die;
+#$dbh->{mysql_auto_reconnect} = 1;
+
+# using grouper_change_log_type to find field names for the different "action_name"s
+my %action_to_groupName = (
+ 'addGroup'         => 'name',
+ 'updateGroup'      => 'name',
+ 'deleteGroup'      => 'name',
+ 'addMembership'    => 'groupName',
+ 'deleteMembership' => 'groupName',
+ 'assignGroupType'  => 'groupName',
+ 'addPrivilege'     => 'ownerName',
+ 'deletePrivilege'  => 'ownerName',
+);
+
+my %action_to_sourceId = (
+  'addMember'     => 'subjectSourceId',
+  'deleteMember'  => 'subjectSourceId',
+  'updateMember'  => 'subjectSourceId',
+  'changeSubject' => 'newSourceId',
+);
+my %action_to_subjectId = (
+  'addMember'     => 'subjectId',
+  'deleteMember'  => 'subjectId',
+  'updateMember'  => 'subjectId',
+  'changeSubject' => 'newSubjectId',
+);
+
+my %type_id_to_group_field = compute_change_log_type_id_to_wanted_field($dbh, \%action_to_groupName);
+my %type_id_to_sourceId_field = compute_change_log_type_id_to_wanted_field($dbh, \%action_to_sourceId);
+my %type_id_to_subjectId_field = compute_change_log_type_id_to_wanted_field($dbh, \%action_to_subjectId);
+
+# shut-up gsh
+open STDOUT, '>/dev/null';
+mylog("starting");
+
+while (1) {
+    my $max_sequence_number = simpleWhere($dbh, 'grouper_change_log_entry', 'max(sequence_number)');
+
+    my %modifiedExternals;
+    foreach my $type_id (keys %type_id_to_sourceId_field) {
+	my $sourceId_field = $type_id_to_sourceId_field{$type_id};
+	my $subjectId_field = $type_id_to_subjectId_field{$type_id};
+	my @subjectIds = simpleWhereAllRows($dbh, 'grouper_change_log_entry', $subjectId_field, change_log_type_id => $type_id, $sourceId_field => 'grouperExternal');
+	$modifiedExternals{$_}++ foreach @subjectIds;
+    }
+    if (my @modifiedExternals = keys %modifiedExternals) {
+        mylog("psp synchronizing the following modified external users: " . join(' ', sort @modifiedExternals));
+	system('bin/gsh', '-psp', '-bulkSync', '-entityName', 'memberExternal');
+    }
+
+    my %modifiedGroups;
+    foreach my $type_id (keys %type_id_to_group_field) {
+	my $field = $type_id_to_group_field{$type_id};
+	my @groupNames = simpleWhereAllRows($dbh, 'grouper_change_log_entry', $field, change_log_type_id => $type_id);
+	$modifiedGroups{$_}++ foreach @groupNames;
+    }
+
+    if (my @modifiedGroups = keys %modifiedGroups) {
+        mylog("psp synchronizing the following modified groups: " . join(' ', map { "$_($modifiedGroups{$_})" } sort @modifiedGroups));
+	system('bin/gsh', '-psp', (map { ('-sync', $_) } @modifiedGroups));
+    }
+
+    doQuery($dbh, 'delete from grouper_change_log_entry where sequence_number <= ?', $max_sequence_number);
+
+    sleep 10;
+}
+
+sub mylog {
+	my ($msg) = @_;
+	my $s = localtime() . ": $msg\n";
+
+	open(my $LOG, '>>', '/var/log/grouper/export-to-ldap.log');
+	print STDERR $s;
+	print $LOG $s;
+}
+
+sub compute_change_log_type_id_to_wanted_field {
+    my ($dbh, $action_to_field_name) = @_;
+    my %h;
+    foreach my $type (keys %$action_to_field_name) {
+        my $r = simpleWhere($dbh, 'grouper_change_log_type', '*', 'action_name' => $type);
+        my ($field) = map { /label_(.*)/ && $r->{$_} eq $action_to_field_name->{$type} ? $1 : () } keys %$r;
+        $h{$r->{id}} = $field;
+    }
+    %h;
+}
+
+sub cookWhereAndValues {
+    my (%constraints) = @_;
+    my @keys = keys %constraints;
+    my $where = @keys ? 'where ' . join(" and ", map { "$_=?" } @keys) : '';
+    $where, [ map { $constraints{$_} } @keys ];
+}
+sub simpleWhere {
+    my ($dbh, $table, $field, %constraints) = @_;
+    my @l = simpleWhereAllRows($dbh, $table, $field, %constraints);
+    $l[0];
+}
+
+sub simpleWhereAllRows {
+    my ($dbh, $table, $field, %constraints) = @_;
+    my ($where, $values) = cookWhereAndValues(%constraints);
+    my $select = "select $field from $table $where";
+    #warn "querying: $select ", @$values, "\n";
+    my @l = queryAllRows($dbh, $select, @$values);
+    if ($field =~ /\*|,/) {
+	@l;
+    } else {
+	map {
+	    my @l = values %$_;
+	    @l == 1 or die;
+	    $l[0];
+	} @l;
+    }
+}
+
+sub queryAllRows {
+    my ($dbh, $request, @args) = @_;
+
+    my $sth = $dbh->prepare($request);
+    $sth->execute(@args);
+
+    my @l;
+    while (my $h = $sth->fetchrow_hashref()) {
+	push @l, $h;
+    }
+    @l;
+}
+
+sub doQuery {
+    my ($dbh, $request, @args) = @_;
+
+#    warn "doQuery: $request, ", join(', ', @args), "\n";
+#    return;
+    my $sth = $dbh->prepare($request);
+    $sth->execute(@args);    
+}
+
+sub parseProperties {
+    my ($config_properties) = @_;
+    open(my $F, '<', $config_properties) or die;
+    my %h = map {
+	!/^\s*#/ && /^(.*?)\s*=\s*(.*?)\s*$/ ? ($1 => $2) : ();
+    } <$F>;
+    \%h
+}

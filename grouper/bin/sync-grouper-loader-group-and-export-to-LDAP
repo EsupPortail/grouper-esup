@@ -1,0 +1,7 @@
+#!/bin/sh
+
+group=$1
+
+cd /opt/grouper-esup/grouper
+bin/gsh -runarg 'loaderRunOneJob(GroupFinder.findByName(GrouperSession.startRootSession(), "'$group'"))'
+bin/gsh -psp -sync "$group"

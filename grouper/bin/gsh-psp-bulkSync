@@ -1,0 +1,5 @@
+#!/bin/sh
+
+. /opt/env.sh
+cd /opt/grouper-esup/grouper
+exec bin/gsh -psp -bulkSync >> /var/log/grouper/gsh-psp-bulkSync.log 2>&1

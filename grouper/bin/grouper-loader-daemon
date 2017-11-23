@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cd /opt/grouper-esup/grouper
+exec bin/gsh -loader >> /var/log/grouper/grouper-loader-daemon.log 2>&1

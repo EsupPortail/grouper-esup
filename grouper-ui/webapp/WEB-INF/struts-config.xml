@@ -235,7 +235,7 @@
     <forward name="Groups" path="/populateMyGroups.do" redirect="false"/>
 	<forward name="Index" path="/populateIndex.do" redirect="true"/>
 	
-	<forward name="Login" path="/login.do" redirect="true"/>
+	<forward name="Login" path="/home.do" redirect="true"/>
 	<forward name="ErrorPage" path="ErrorPageDef" redirect="false"/>
 	<forward name="FilterError" path="/filterError.do" redirect="false"/>
   </global-forwards>
@@ -366,7 +366,7 @@
             type="edu.internet2.middleware.grouper.ui.actions.CallLoginAction"
             unknown="false" validate="false">
   
-      <forward name="callLogin" path="/login.do" redirect="true"/>
+      <forward name="callLogin" path="/home.do" redirect="true"/>
     </action>
   
     <action name="GroupFormBean" path="/deleteGroup" scope="request"

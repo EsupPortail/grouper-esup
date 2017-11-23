@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Provisioning Service Provider (PSP) configuration. -->
+
+<!-- A <pso /> is a Provisioning Service Object. The authoritative and allSourceIdentifiersRef attributes control the provisioning 
+  of all source and target objects. If authoritative is "true", orphan objects will be deleted. Orphan objects exist on a target 
+  without a corresponding source object. The allSourceIdentifiersRef attribute refers to an attribute resolver definition whose 
+  values are all source identifiers applicable to this provisioned object. -->
+<!-- <pso id="entityName" authoritative="[true|false]" allSourceIdentifiersRef="attributeDefinitionID" /> -->
+
+<!-- The pso identifier refers to an attribute resolver definition. The targetId must match the id of a provisioning service 
+  target in psp-services.xml. The containerId is the string id of the pso identifier containing these objects. -->
+<!-- <identifier ref="attributeDefinitionID" targetId="targetId" containerId="containerId"/> -->
+
+<!-- The identifying attribute has two purposes : (1) to determine the schema entity of target objects returned from a lookup 
+  or search request and (2) to be converted to a query to search a target for all identifiers. If the identifying attribute 
+  is not present, the pso will be ignored during bulk requests. -->
+<!-- <identifyingAttribute name="attributeName" value="attributeValue" /> -->
+
+<!-- The alternate identifier refers to an attribute resolver definition, and is the previous (old) identifier of an object 
+  after it has been renamed. -->
+<!-- <alternateIdentifier ref="attributeDefinitionID" /> -->
+
+<!-- A provisioned attribute refers to an attribute resolver definition. -->
+<!-- <attribute name="attributeName" ref="attributeDefinitionID" /> -->
+
+<!-- References to the identifiers of other objects. -->
+<!-- <references name="attributeName"> <reference ... /> </references> -->
+
+<!-- A reference to the identifier of an object refers to an attribute resolver definition. -->
+<!-- <reference ref="attributeDefinitionID" toObject="psoId" /> -->
+
+
+
+<psp
+  xmlns="http://grouper.internet2.edu/psp"
+  xmlns:psp="http://grouper.internet2.edu/psp"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://grouper.internet2.edu/psp classpath:/schema/psp.xsd">
+
+  <!-- Provision a grouper group as an ldap group. -->
+  <pso
+    id="group"
+    authoritative="true"
+    allSourceIdentifiersRef="groupNames">
+
+    <!-- The ldap group DN. -->
+    <identifier
+      ref="groupDn"
+      targetId="ldap"
+      containerId="${edu.internet2.middleware.psp.groupsBaseDn}" />
+
+    <!-- Identifies ldap group objects which exist on the target by objectClass attribute value. -->
+    <identifyingAttribute
+      name="owner"
+      value="${edu.vt.middleware.ldap.bindDn}" />
+
+    <!-- The "old" ldap group DN if a group has been renamed. -->
+    <alternateIdentifier ref="groupDnAlternate" />
+
+    <!-- The "old" ldap group DN calculated from group update change log events. -->
+    <alternateIdentifier ref="groupDnAlternateChangeLog" />
+
+    <!-- The ldap group "objectClass" attribute. No existing values will be deleted since retainAll is true. -->
+    <attribute
+      name="objectClass"
+      ref="groupObjectclass"
+      retainAll="true" />
+<!-- psp cleanup: setting "cn" attribute is useless since groupDn uses rdnAttributeName cn and so sets cn already -->
+    <attribute name="supannGroupeAdminDN" ref="supannGroupeAdminDN" />
+    <attribute name="owner" ref="owner" />
+
+    <!-- The ldap group "description" attribute. -->
+    <attribute
+      name="description"
+      ref="groupDescription" />
+
+    <!-- The ldap group "description" attribute. -->
+    <attribute
+      name="ou"
+      ref="groupName" />
+
+    <attribute name="businessCategory" />
+    <attribute name="seeAlso" />
+    <attribute name="labeledURI" />
+
+    <!-- The ldap group "member" attribute. -->
+    <!-- The value of emptyValue is provisioned when the group has no members. -->
+    <references
+      name="member"
+      emptyValue="">
+
+      <reference
+        ref="membersLdap"
+        toObject="member" />
+<!--
+      <reference
+        ref="membersExternal"
+        toObject="memberExternal" />
+-->
+    </references>
+
+    <!-- The ldap group "supannGroupeLecteurDn" attribute. -->
+    <!-- The value of emptyValue is provisioned when the group has no members. -->
+    <!-- cleanup: ldap "member"s can be re-used for ldap readers & admins -->
+    <references
+      name="supannGroupeLecteurDn">
+
+      <reference
+        ref="readersLdap"
+        toObject="member" />
+
+    </references>
+
+    <!-- The ldap group "supannGroupeAdminDN" attribute. -->
+    <!-- The value of emptyValue is provisioned when the group has no members. -->
+    <!-- cleanup: ldap "member"s can be re-used for ldap readers & admins -->
+    <references
+      name="supannGroupeAdminDN">
+
+      <reference
+        ref="groupAdminsLdap"
+        toObject="member" />
+
+    </references>
+
+  </pso>
+
+
+  <!-- Provision a group membership triggered by the grouper change log. -->
+  <pso id="groupMembership">
+
+    <!-- The ldap group DN calculated from membership change log events. -->
+    <identifier
+      ref="changeLogMembershipGroupDn"
+      targetId="ldap"
+      containerId="${edu.internet2.middleware.psp.groupsBaseDn}" />
+
+    <!-- The ldap group "member" attribute. -->
+    <references name="member">
+
+      <reference
+        ref="changeLogMembershipLdapSubjectId"
+        toObject="member" />
+
+    </references>
+
+  </pso>
+
+  <!-- Do not provision grouper members, but enable lookup. -->
+  <pso id="member">
+
+    <!-- The ldap member DN. -->
+    <identifier
+      ref="memberDn"
+      targetId="ldap"
+      containerId="${edu.internet2.middleware.psp.peopleBaseDn}" />
+
+    <!-- Identifies member objects which exist on the target by objectclass attribute value. -->
+    <identifyingAttribute
+      name="objectclass"
+      value="person" />
+
+  </pso>
+
+<!--
+  <pso id="memberExternal"
+    authoritative="true"
+    allSourceIdentifiersRef="allExternalMemberSubjectIds">
+
+    - The ldap member DN. -
+    <identifier
+      ref="memberExternalDn"
+      targetId="ldap"
+      containerId="ou=externalPeople,dc=univ-ville,dc=fr" />
+
+    - Identifies member objects which exist on the target by objectclass attribute value. -
+    <identifyingAttribute
+      name="supannParrainDN"
+      value="${edu.vt.middleware.ldap.bindDn}" />
+
+    <attribute name="objectClass" ref="memberObjectclass" />
+    <attribute name="sn" ref="memberExternalSn"/>
+    <attribute name="cn" ref="memberExternalCn"/>
+    <attribute name="givenname" ref="memberExternalGivenname"/>
+    <attribute name="displayName" ref="memberExternalName"/>
+    <attribute name="supannMailPerso" ref="memberExternalEmail"/>
+    <attribute name="supannParrainDN" ref="owner"/>
+
+  </pso>
+-->
+
+</psp>
+ 
+
+

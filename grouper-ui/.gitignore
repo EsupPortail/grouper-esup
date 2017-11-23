@@ -1,6 +1,7 @@
 .lastbuild.properties
 build.properties
 dist
+build
 logs
 spy.log
 temp
