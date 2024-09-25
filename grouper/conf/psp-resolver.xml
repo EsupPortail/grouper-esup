@@ -545,14 +545,10 @@
     <resolver:Dependency ref="StaticDataConnector" />
     <resolver:Dependency ref="UpdateStemNameChangeLogDataConnector" />
     <resolver:Dependency ref="UpdateStemDescriptionChangeLogDataConnector" />
+    <resolver:Dependency ref="stemObjectclassForScript" />    
     <!-- <resolver:Dependency ref="StemAttributeAssignValueChangeLogDataConnector" /> -->
     <ad:Script><![CDATA[
-        // Import Shibboleth attribute provider.
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        
-        // Create the attribute to be returned.
-        stemObjectclass = new BasicAttribute("stemObjectclass");
-        
+        stemObjectclass.getValues().clear(); // remove the dummy value
         // Include values from 'staticStemObjectclass' if a change log entry is not being processed.
         if (typeof changeLogCategory != "undefined" && changeLogCategory != null) {
             // return nothing        
@@ -561,6 +557,12 @@
         }                       
     ]]></ad:Script>
   </resolver:AttributeDefinition>
+
+   <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="stemObjectclassForScript">
+        <Attribute id="stemObjectclass">
+            <Value>dummy</Value>
+        </Attribute>
+    </resolver:DataConnector>
 
   <!-- The value of stem "stemOu" attribute is the stem extension. -->
   <resolver:AttributeDefinition
@@ -630,19 +632,24 @@
     sourceAttributeID="groupNameInStemRaw"
     xsi:type="ad:Script">
     <resolver:Dependency ref="groupNameInStemRaw" />
+    <resolver:Dependency ref="groupNameInStemForScript" />    
     <ad:Script><![CDATA[
-        // Import Shibboleth attribute provider.
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        
+    
         // cleanup: when computing groupNameInStem using groupNameInStemRaw, handle empty groupNameInStem (it only occurs in buggy cases, but it can hide the useful errors)
         // Create the attribute to be returned.
-        groupNameInStem = new BasicAttribute("groupNameInStem");
+        groupNameInStem.getValues().clear(); // remove the dummy value
 	if (!groupNameInStemRaw.getValues().isEmpty()) {
 	     groupNameInStem.getValues().add(groupNameInStemRaw.getValues().get(0).replace(":", "."));
 	}
     ]]></ad:Script>
   </resolver:AttributeDefinition>
 
+   <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="groupNameInStemForScript">
+        <Attribute id="groupNameInStem">
+            <Value>dummy</Value>
+        </Attribute>
+    </resolver:DataConnector>
+  
 
   <!-- The alternate LDAP DN of a group. For example, the DN of a group before it is renamed. -->
   <resolver:AttributeDefinition
@@ -678,12 +685,9 @@
     <resolver:Dependency ref="StaticDataConnector" />
     <resolver:Dependency ref="labeledURIObjectclass" />
     <resolver:Dependency ref="GroupAttributeAssignValueChangeLogDataConnector" />
+    <resolver:Dependency ref="groupObjectclassForScript" />
     <ad:Script><![CDATA[
-        // Import Shibboleth attribute provider.
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        
-        // Create the attribute to be returned.
-        groupObjectclass = new BasicAttribute("groupObjectclass");
+        groupObjectclass.getValues().clear(); // remove the dummy value
         
         // Include values from 'staticGroupObjectClass' if the change log category is not 'attributeAssignValue'.
         if (typeof changeLogCategory != "undefined" && changeLogCategory != null) {
@@ -704,6 +708,13 @@
     ]]></ad:Script>
   </resolver:AttributeDefinition>
 
+     <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="groupObjectclassForScript">
+        <Attribute id="groupObjectclass">
+            <Value>dummy</Value>
+        </Attribute>
+    </resolver:DataConnector>
+
+
   <!-- The value of the "labeledURIObjectclass" attribute is "labeledURIObject" if the "labeledURI" 
     attribute is not empty. -->
   <resolver:AttributeDefinition
@@ -711,12 +722,9 @@
     sourceAttributeID="labeledURI"
     xsi:type="ad:Script">
     <resolver:Dependency ref="labeledURI" />
+    <resolver:Dependency ref="labeledURIObjectclassForScript" />    
     <ad:Script><![CDATA[
-        // Import Shibboleth attribute provider.
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        
-        // Create the attribute to be returned.
-        labeledURIObjectclass = new BasicAttribute("labeledURIObjectclass");
+        labeledURIObjectclass.getValues().clear(); // remove the dummy value
         
         // Return value 'labeledURIObject' if 'labeledURI' is not empty. 
         if (typeof labeledURI != "undefined" && labeledURI != null) {
@@ -726,6 +734,12 @@
         }
     ]]></ad:Script>
   </resolver:AttributeDefinition>
+
+   <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="labeledURIObjectclassForScript">
+        <Attribute id="labeledURIObjectclass">
+            <Value>dummy</Value>
+        </Attribute>
+    </resolver:DataConnector>  
 
   <!-- The value of the group "description" attribute is the group description. -->
   <resolver:AttributeDefinition
@@ -754,18 +768,20 @@
     sourceAttributeID="groupDescription"
     xsi:type="ad:Script">
     <resolver:Dependency ref="groupDescription" />
+    <resolver:Dependency ref="groupDescriptionObsoleteForScript" />    
     <ad:Script><![CDATA[
-        // Import Shibboleth attribute provider.
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        
-        // Create the attribute to be returned.
-        groupDescriptionObsolete = new BasicAttribute("groupDescriptionObsolete");
+        groupDescriptionObsolete.getValues().clear(); // remove the dummy value
 	if (!groupDescription.getValues().isEmpty()) {
 	    groupDescriptionObsolete.getValues().add(groupDescription.getValues().get(0) + " (obsolete)");
 	}
     ]]></ad:Script>
   </resolver:AttributeDefinition>
 
+     <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="groupDescriptionObsoleteForScript">
+        <Attribute id="groupDescriptionObsolete">
+            <Value>dummy</Value>
+        </Attribute>
+    </resolver:DataConnector>
 
   <!-- The values of the group "hasMember" attribute include the names of the groups which are members of the group. -->
   <!-- The values of the group "hasMember" attribute include the ids of the subjects which are members of the group. -->
@@ -926,7 +942,7 @@
     structure="flat"
     sourceAttributeID="identifier"
     rdnAttributeName="eduPersonPrincipalName"
-    baseDn="ou=externalPeople,dc=univ-ville,dc=fr"
+    baseDn="ou=externalPeople,dc=univ-rouen,dc=fr"
     baseStem="unused">
     <resolver:Dependency ref="MemberExternalWithoutMembershipsDataConnector" />
   </resolver:AttributeDefinition>
@@ -993,12 +1009,9 @@
     xsi:type="ad:Script">
     <resolver:Dependency ref="AddMembershipChangeLogDataConnector" />
     <resolver:Dependency ref="DeleteMembershipChangeLogDataConnector" />
+    <resolver:Dependency ref="changeLogMembershipGroupSubjectNameForScript" />    
     <ad:Script><![CDATA[
-        // Import Shibboleth attribute provider.
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        
-        // Create the attribute to be returned.
-        changeLogMembershipGroupSubjectName = new BasicAttribute("changeLogMembershipGroupSubjectName");
+        changeLogMembershipGroupSubjectName.getValues().clear(); // remove the dummy value
         
         // Return 'subjectName' attribute values if the 'sourceId' attribute is 'g:gsa'.
         if (typeof sourceId != "undefined" && sourceId != null ){            
@@ -1011,6 +1024,12 @@
     ]]></ad:Script>
   </resolver:AttributeDefinition>
 
+   <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="changeLogMembershipGroupSubjectNameForScript">
+        <Attribute id="changeLogMembershipGroupSubjectName">
+            <Value>dummy</Value>
+        </Attribute>
+    </resolver:DataConnector>
+  
   <!-- The value of the "changeLogMembershipLdapSubjectId" attribute is the subject identifier of the "ldap" source member 
     of a membership change log entry. -->
   <resolver:AttributeDefinition
@@ -1018,12 +1037,9 @@
     xsi:type="ad:Script">
     <resolver:Dependency ref="AddMembershipChangeLogDataConnector" />
     <resolver:Dependency ref="DeleteMembershipChangeLogDataConnector" />
+    <resolver:Dependency ref="changeLogMembershipLdapSubjectIdForScript" />    
     <ad:Script><![CDATA[
-        // Import Shibboleth attribute provider.
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        
-        // Create the attribute to be returned.
-        changeLogMembershipLdapSubjectId = new BasicAttribute("changeLogMembershipLdapSubjectId");
+        changeLogMembershipLdapSubjectId.getValues().clear(); // remove the dummy value
         
         // Return 'subjectId' attribute values if the 'sourceId' attribute is 'ldap'.
         if (typeof sourceId != "undefined" && sourceId != null ){            
@@ -1036,6 +1052,12 @@
     ]]></ad:Script>
   </resolver:AttributeDefinition>
 
+     <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="changeLogMembershipLdapSubjectIdForScript">
+        <Attribute id="changeLogMembershipLdapSubjectId">
+            <Value>dummy</Value>
+        </Attribute>
+     </resolver:DataConnector>
+     
   <!-- The value of the "changeLogMembershipSubjectName" attribute is the subject name of a membership change log entry. -->
   <resolver:AttributeDefinition
     id="changeLogMembershipSubjectName"
@@ -1099,9 +1121,9 @@
     xsi:type="ad:Script">
     <resolver:Dependency ref="AddMembershipChangeLogDataConnector" />
     <resolver:Dependency ref="DeleteMembershipChangeLogDataConnector" />
+    <resolver:Dependency ref="changeLogMembershipLdapSubjectDnForScript" />    
     <ad:Script><![CDATA[
-        importPackage(Packages.edu.internet2.middleware.shibboleth.common.attribute.provider);
-        changeLogMembershipLdapSubjectDn = new BasicAttribute("changeLogMembershipLdapSubjectDn");
+        changeLogMembershipLdapSubjectDn.getValues().clear(); // remove the dummy value
         if (typeof sourceId != "undefined" && sourceId != null ){
             if (sourceId.getValues().contains("ldap")) {
                 if (typeof subjectdn != "undefined" && subjectdn != null ){
@@ -1112,4 +1134,11 @@
     ]]></ad:Script>
   </resolver:AttributeDefinition>
 
+     <resolver:DataConnector xmlns="urn:mace:shibboleth:2.0:resolver:dc" xsi:type="dc:Static" id="changeLogMembershipLdapSubjectDnForScript">
+        <Attribute id="changeLogMembershipLdapSubjectDn">
+            <Value>dummy</Value>
+        </Attribute>
+    </resolver:DataConnector>
+
+    
 </AttributeResolver>
