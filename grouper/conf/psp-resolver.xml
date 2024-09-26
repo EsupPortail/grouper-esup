@@ -639,7 +639,7 @@
         // Create the attribute to be returned.
         groupNameInStem.getValues().clear(); // remove the dummy value
 	if (!groupNameInStemRaw.getValues().isEmpty()) {
-	     groupNameInStem.getValues().add(groupNameInStemRaw.getValues().get(0).replace(":", "."));
+	     groupNameInStem.getValues().add(groupNameInStemRaw.getValues().get(0).replaceAll(":", "."));
 	}
     ]]></ad:Script>
   </resolver:AttributeDefinition>
