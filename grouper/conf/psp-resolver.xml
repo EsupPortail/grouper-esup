@@ -942,7 +942,7 @@
     structure="flat"
     sourceAttributeID="identifier"
     rdnAttributeName="eduPersonPrincipalName"
-    baseDn="ou=externalPeople,dc=univ-rouen,dc=fr"
+    baseDn="ou=externalPeople,dc=univ-ville,dc=fr"
     baseStem="unused">
     <resolver:Dependency ref="MemberExternalWithoutMembershipsDataConnector" />
   </resolver:AttributeDefinition>
